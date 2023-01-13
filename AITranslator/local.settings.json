@@ -1,0 +1,23 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=storageaccounttransbf73;AccountKey=PY8qbZmul63QhbPc5drNzrDIZPl0lEzITFGoVmx5JpYQrEQfaPI4XMYUYhrvuwpZfXc4PA1BIscxDDiLXlsDrw==;EndpointSuffix=core.windows.net",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "SAS_TOKEN": "?sv=2019-12-12&ss=bfqt&srt=sco&sp=rwdlacupx&se=2025-01-08T11:21:30Z&st=2021-01-08T03:21:30Z&spr=https&sig=meUUUXiPTEZYW3jtf8UnDENHfNIPlmYwDcI20ura914%3D",
+    "TRANSLATION_KEY": "c991b604f7174fa88c2581ec8224bb91",
+    "TRANSLATION_MODEL_CATEGORY": "64f12deb-a8ed-438a-8b90-da5ac38c77a8-TECH",
+    "TRANSLATE_EXCEL_FUNCTION_URL": "https://translationfunctionnwk.azurewebsites.net/api/TranslateExcelDoc?code=6Xbty2Ibv5mSTGvpPL0ff563LG44As1HV9LShbUZ5QiK1IXAPxmAdQ==",
+    "translationdocsstorage_STORAGE": "DefaultEndpointsProtocol=https;AccountName=translationdocsstorage;AccountKey=egY1GMShp6xdYffTUdRySOc1MMzF6n39xk1TCNYZUUugxCKqBbNO1Y/43HA468rDbEwf/hL/Vlr5e+Rz05Qk6Q==;EndpointSuffix=core.windows.net",
+    "TRANSLATION_TABLE_NAME": "translationdocsstorage",
+    "TRANSLATION_TABLE_KEY": "egY1GMShp6xdYffTUdRySOc1MMzF6n39xk1TCNYZUUugxCKqBbNO1Y/43HA468rDbEwf/hL/Vlr5e+Rz05Qk6Q==",
+    "SPEECH_KEY": "e3bc96ab479246aca7fd9ee3bcc599ea",
+    "SPEECH_REGION": "eastus",
+    "TRANSLATE_WAV_FUNCTION_URL": "https://translatorfunctionnwkv2.azurewebsites.net/api/TranslateWavFile?code=PZc2hEh4K1HngNBluF5W/NFSHVGhAJsOyvbxF9flXcaldVdGuO5RRA==",
+    "STORAGE_ACCOUNT_URL": "https://translationdocsstorage.blob.core.windows.net/",
+    "DOWNLOAD_AUDIO_SAS_TOKEN":"sp=rw&st=2022-11-03T06:14:12Z&se=2025-12-31T14:14:12Z&spr=https&sv=2021-06-08&sr=c&sig=zkvCpNBKqN08omZ9ZfRz9G34pYsf9Cpc%2BFXNxXLqfzE%3D",
+    "BLOB_STORAGE_ACCOUNT_URL":"https://azcdsstoragefapp01d.blob.core.windows.net/",
+    "UPLOAD_AUDIO_SAS_TOKEN":"sp=r&st=2022-11-02T09:47:46Z&se=2025-12-31T17:47:46Z&spr=https&sv=2021-06-08&sr=c&sig=oeyh0YLTL4%2FjDNYsEwGxkkCx2YfKwY%2Bae%2F8OpNCDzX4%3D",
+    "STORAGE_ACCOUNT_NAME":"azcdsstoragefapp01d",
+    "STORAGE_ACCOUNT_CONTAINER":"audioupload"
+  }
+}
