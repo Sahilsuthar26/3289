@@ -1,0 +1,400 @@
+
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
+using Nalco.enVision.Data.Access.UiSettings;
+using Nalco.enVision.Data.Entities.UiSettings;
+using Nalco.enVision.Library.WebShared;
+using Nalco.enVision.Library.WebShared.Authentication;
+using Nalco.enVision.Data.Access.CustomerContext;
+using Nalco.enVision.Web.Mapper;
+
+using Nalco.enVision.Services.Interfaces.TextileCare.Reports;
+using serviceModel = Nalco.enVision.Models.TextileCare.Reports;
+using webModel = Nalco.enVision.Web.Areas.TextileCare.Models.Report;
+using Nalco.enVision.Web.Areas.TextileCare.Models.Report;
+using Nalco.enVision.Services.TextileCare.Reports;
+using System;
+using Nalco.enVision.Web.Areas.TextileCare.Controllers;
+using System.Data.SqlClient;
+using System.Data;
+
+namespace Nalco.enVision.Web.Models.Home
+{
+	/// <summary>
+	/// Model that binds to _EnvisionToolSet partial view.
+	/// </summary>
+	public  class ChooseCustomerModel : BaseModel
+	{
+		#region Data Fields
+		private ReportModel mMainReportModel;
+		private ReportMenuModel mModelReportMenu;
+		private IReportMasterService mReportMasterService;
+		private ReportLeftNavigation mReportLeftNavigation;
+		private const string SECTION_TOOLSET = "TOOLSET$$$$$$$$";
+
+		#endregion
+
+		#region Constructors
+
+		public ChooseCustomerModel(IEnvisionPrincipal enVisionPrincipal)
+			: base(enVisionPrincipal, loadLeftNavigation: false, isLoadComplete: false)
+		{
+
+			this.EnvisionUser = enVisionPrincipal;
+			this.mReportMasterService = new ReportMasterService();
+			mReportLeftNavigation = new ReportLeftNavigation();
+			BuildModels(EnvisionUser);
+		}
+
+		#endregion
+
+		#region Properties
+
+		public UiSections ApplicableToolSet { get; private set; }
+		public List<CustomerContextModel> CustomerContexts { get; set; }
+		public ChooseCustomerViewModel ChooseCustomerPopUpModel { get; set; }
+        public FiltersViewModel ChooseCustomerPopupFilterDataModel { get; set; }
+		public ReportModel ReportLayoutModelAdminMenu { get; set; }
+		public string Name { get; set; }
+		public int ID { get; set; }
+		public BannerModel BannerDataModel { get; set; }
+
+
+		#endregion
+
+		#region Methods
+
+		/// <summary>
+		/// Gets UiSections for main toolset
+		/// </summary>
+		/// <param name="userId"> user id</param>
+		/// <returns> top parent uisection whose parentid is null</returns>
+		private void BuildToolSetModel(int userId)
+		{
+			ApplicableToolSet = UiSectionAccess.GetUiSections(SECTION_TOOLSET);
+		}
+
+		/// <summary>
+		/// Builds and Populates CustomerContexts Property which provided the selected location or system context.
+		/// </summary>
+		/// <param name="userId"></param>
+		private void BuildCustomerContexts(int userId)
+		{
+			var apiUrl = string.Format("{0}/Search/GetCustomerContexts?userId={1}", ConfigurationManager.AppSettings["ContextServiceServerBaseURL"], userId);
+			CustomerContexts = HttpClientHelper<List<CustomerContextModel>>.RequestAsync(apiUrl);
+		}
+		/// <summary>
+		/// Builds the viewmodel for choose customer Popup and sets the current context.
+		/// </summary>
+		/// <param name="enVisionPrincipal"></param>
+		private void BuildChooseCustomerPopupModel(IEnvisionPrincipal enVisionPrincipal)
+		{
+			ChooseCustomerPopUpModel = new ChooseCustomerViewModel(enVisionPrincipal);
+            if(CustomerContexts != null && CustomerContexts.Any())
+            {
+                var topContext = CustomerContexts.FirstOrDefault();
+				ChooseCustomerPopUpModel.CurrentContextId = topContext.CustomerContextId;
+				ChooseCustomerPopUpModel.CurrentContextType = topContext.CustomerContextType;
+			}
+		    ChooseCustomerPopUpModel.FiltersData = BuildChooseCustomerPopupFilterDataModel(enVisionPrincipal.UserId);
+            ChooseCustomerPopUpModel.UserFiltersData = BuildChooseCustomerPopupPlantSelectionFilters(enVisionPrincipal.UserId);
+		}
+
+		/// <summary>
+		/// Builds the model for Banner and get SiteNotificationText and get SiteNotificationTextEnabled
+		/// </summary>
+		/// <param name="enVisionPrincipal"></param>
+		private void BuildBannerModel(IEnvisionPrincipal enVisionPrincipal)
+		{
+			BannerDataModel = new BannerModel(enVisionPrincipal);
+			
+			DataSet ds = BannerDataModel.SqlExecute();
+
+			if(CustomerContexts != null && CustomerContexts.Any())
+			{
+				if(ds.Tables[0].Rows.Count > 0)
+				{
+					BannerDataModel.SiteNotificationTextEnabled = ds.Tables[0].Rows[0]["BannerEnabled"].ToString();
+					BannerDataModel.SiteNotificationText = ds.Tables[0].Rows[0]["BannerText"].ToString();
+				}
+				else
+				{
+					BannerDataModel.SiteNotificationTextEnabled ="False";
+					BannerDataModel.SiteNotificationText = "enVision maintenance activities are planned between 28 February and 1 March 2020.Please be aware that during this period access to the enVision Central Portal might be interrupted and reports and alerts not generated and delivered. We apologise for any inconveniences this may cause.";
+				}
+			}
+		}
+
+		/// <summary>
+		/// Builder Method to build toolset,customer current context and model for choose customer popup
+		/// </summary>
+		/// <param name="enVisionPrincipal"></param>
+		private void BuildModels(IEnvisionPrincipal enVisionPrincipal)
+		{
+			if(enVisionPrincipal != null)
+			{
+				BuildToolSetModel(enVisionPrincipal.UserId);
+				BuildCustomerContexts(enVisionPrincipal.UserId);
+				BuildChooseCustomerPopupModel(enVisionPrincipal);
+				BuildBannerModel(enVisionPrincipal);
+				BuildReportLayoutmodel();
+			}
+		}
+
+		private void BuildReportLayoutmodel()
+		{
+			ReportLayoutModelAdminMenu = mReportLeftNavigation.GetReportLeftNavAndSettings(0, "Admin", EnvisionUser);
+		}
+		public ReportModel SetReportLeftNavAndSettings(int reportId, ReportSettingsModel reportSettings = null, string plantLanguageId = null)
+		{
+
+			List<serviceModel.ReportInfo> reportLayout;
+			if(string.IsNullOrEmpty(plantLanguageId))
+			{
+				reportLayout = mReportMasterService.FetchReports((int)EnvisionUser.ExtendedUserType, EnvisionUser.LanguageId, EnvisionUser.RegionId);
+			}
+			else
+			{
+				reportLayout = mReportMasterService.FetchReports((int)EnvisionUser.ExtendedUserType, int.Parse(plantLanguageId), EnvisionUser.RegionId);
+			}
+
+
+			List<ReportInfoModel> reportModels = EntityConverter.Map<List<serviceModel.ReportInfo>, List<webModel.ReportInfoModel>>(reportLayout);
+
+			ReportMenuModel centralReports = GetMenuDataForReport(reportModels);
+			if(mMainReportModel == null)
+			{
+				mMainReportModel = new ReportModel();
+			}
+			mMainReportModel.ReportLayoutModel = centralReports;
+
+			ReportInfoModel report = centralReports.Reports
+				.Where(p => (reportId != 0) ? p.ReportId == reportId : p.IsLandingReport)
+				.FirstOrDefault();
+
+			//ToDo:Need to Remove once mapping done for the all roles in DB
+			if(report == null)
+			{
+				report = centralReports.Reports.Where(p => p.ReportId == 1).FirstOrDefault();
+			}
+			List<enVision.Models.TextileCare.Reports.ReportFavourites> reportFavourites = FetchReportFav(EnvisionUser.UserId, 0);
+
+			mMainReportModel.ReportFavourites = reportFavourites;
+
+			if(reportSettings == null)
+			{
+				reportSettings = new ReportSettingsModel();
+			}
+
+			GetReportBasicSettings(report, reportSettings);
+
+			mMainReportModel.ReportSettingsModel = reportSettings;
+			if(!string.IsNullOrEmpty(plantLanguageId))
+			{
+				mMainReportModel.ReportSettingsModel.UserLanguageId = int.Parse(plantLanguageId);
+			}
+			mMainReportModel.ReportSettingsModel.ReportName = "Admin";
+			mMainReportModel.ReportSettingsModel.ReportId = 0;
+			mMainReportModel.ReportGridAndChartModel = new ReportDetailsModel();
+			mMainReportModel.RibbonDetailsModel = new RibbonDetailsModel();
+			mMainReportModel.FiltersModel = null;
+
+			return mMainReportModel;
+		}
+		private webModel.ReportSettingsModel GetReportBasicSettings(webModel.ReportInfoModel report, webModel.ReportSettingsModel reportSettings)
+        {
+            //ToDo:
+            //Settings should be changed accroding to report and user role id.
+            //Implementation is pending.
+            if (report != null)
+            {
+                if (reportSettings.Filters == null)
+                {
+                    reportSettings.Filters = new webModel.FiltersModel();
+                }
+
+                reportSettings.DisplayTopRecordsCount = report.DisplayTopRecordsCount;
+                reportSettings.ShowOthers = report.ShowOthers;
+                reportSettings.ShowTotal = report.ShowTotal;
+                reportSettings.ReportId = report.ReportId;
+                DateTime clientDay = DateTime.UtcNow.AddMinutes(-0).Date;
+                // setting UTC kind to avoid convertion issues on client side
+                DateTime firstDayOfTheMonth = new DateTime(clientDay.Year, clientDay.Month, 1, 0 ,0, 0, DateTimeKind.Utc);
+                if (!reportSettings.IsLinkingReport)
+                {
+                    reportSettings.FromDate = firstDayOfTheMonth;
+                    reportSettings.ToDate = clientDay;
+                    reportSettings.PrevCurrentStandardId = 2; //Current tab in TimeLine
+                    reportSettings.StandardTimeLineId = 3; //Month tab in TimeLine
+                    reportSettings.PeriodType = "3"; //by default assigning Month for Period Production report
+                    reportSettings.HasPagination = true;
+                    reportSettings.CurrentPageIndex = 1;
+					if(!reportSettings.IsFavourite || (reportSettings.IsFavourite && string.IsNullOrEmpty(reportSettings.SortDirection)))
+                       reportSettings.SortDirection = OrderBy.Desc.ToString(); //Create SortDirection Enum , dont hard code
+                }
+
+                reportSettings.ReportName = report.ReportName;
+                reportSettings.ReportName = report.ReportName;
+                reportSettings.PageSize = report.PageSize;
+                reportSettings.UserId = EnvisionUser.UserId; //Get User Id from User Context dont hard code
+
+                reportSettings.ChartType = report.ChartType;
+                reportSettings.UserCountry = EnvisionUser.Country;
+                reportSettings.UserRegion = EnvisionUser.RegionId;
+                reportSettings.UserType = EnvisionUser.User.UserType;
+                reportSettings.UserCulture = EnvisionUser.Culture.Name;
+                reportSettings.UserLanguageId = EnvisionUser.LanguageId;
+                reportSettings.UserCurrency = EnvisionUser.User.Currency;
+                reportSettings.UnitsOfMeasure = EnvisionUser.User.UnitsOfMeasure;
+                reportSettings.RoleId = (int)this.EnvisionUser.ExtendedUserType;
+                reportSettings.UserName = EnvisionUser.FirstName;
+
+            }
+            return reportSettings;
+        }
+	
+		public List<enVision.Models.TextileCare.Reports.ReportFavourites> FetchReportFav(int userId, int roleId, string userIds = null)
+		{
+			List<enVision.Models.TextileCare.Reports.ReportFavourites> reportFavourites = new List<enVision.Models.TextileCare.Reports.ReportFavourites>();
+			if(userId > 0)
+			{
+				reportFavourites = mReportMasterService.FetchReportFav(userId, roleId, userIds);
+			}
+
+			return reportFavourites;
+		}
+
+		/// <summary>
+		///     This method will get data for Report Menu
+		/// </summary>
+		/// <param name="reportModels">reportModels</param>
+		/// <returns>Model Data for the Report (Categories,Subcategories,Reports)</returns>
+		private webModel.ReportMenuModel GetMenuDataForReport(List<webModel.ReportInfoModel> reportModels)
+		{
+			if(mModelReportMenu == null)
+			{
+				mModelReportMenu = new webModel.ReportMenuModel();
+			}
+
+			mModelReportMenu.ReportCategories = new List<webModel.ReportCategoriesModel>();
+			mModelReportMenu.ReportSubCategories = new List<webModel.ReportSubCategoriesModel>();
+			mModelReportMenu.Reports = new List<webModel.ReportInfoModel>();
+
+			GetReportCategories(reportModels);
+			GetReportSubCategories(reportModels);
+			GetReports(reportModels);
+
+			return mModelReportMenu;
+		}
+
+		/// <summary>
+		///     This method will get data for Report Categories
+		/// </summary>
+		/// <param name="reportModels">All report data</param>
+		private void GetReportCategories(List<webModel.ReportInfoModel> reportModels)
+		{
+			var categories = from element in reportModels
+							 group element by element.ReportCategoryId
+								 into groups
+							 select groups.First();
+
+			foreach(var item in categories)
+			{
+				var cat = new webModel.ReportCategoriesModel
+				{
+					ReportCategoryId = item.ReportCategoryId,
+					CategoryName = item.ReportCategoryName,
+					CategoryDefaultReport = item.CategoryDefaultReport,
+					CategoryDisplayOrder = item.CategoryDisplayOrder
+				};
+
+				mModelReportMenu.ReportCategories.Add(cat);
+			}
+		}
+
+		/// <summary>
+		///     This method will get data for Report SubCategories
+		/// </summary>
+		/// <param name="reportModels">All report data</param>
+		private void GetReportSubCategories(List<webModel.ReportInfoModel> reportModels)
+		{
+			var subcategories = from element in reportModels
+								group element by element.SubCategoryId
+									into groups
+								select groups.First();
+
+			foreach(var item in subcategories)
+			{
+				webModel.ReportSubCategoriesModel subCat = new webModel.ReportSubCategoriesModel
+				{
+					ReportCategoryId = item.ReportCategoryId,
+					ReportSubCategoryId = item.SubCategoryId,
+					SubCategoryName = item.SubCategoryName,
+					SubCategoryDefaultReport = item.SubCategoryDefaultReport
+				};
+				mModelReportMenu.ReportSubCategories.Add(subCat);
+			}
+		}
+		private void GetReports(List<webModel.ReportInfoModel> reportInfoModel)
+		{
+			var reportlist = from element in reportInfoModel
+							 group element by element.ReportId
+								 into groups
+							 select groups.First();
+
+			foreach(var item in reportlist.OrderBy(p => p.DisplayOrder))
+			{
+				webModel.ReportInfoModel report = new webModel.ReportInfoModel
+				{
+					SubCategoryId = item.SubCategoryId,
+					ReportId = item.ReportId,
+					ReportName = item.ReportName,
+					DisplayTopRecordsCount = item.DisplayTopRecordsCount,
+					ShowTotal = item.ShowTotal,
+					ShowOthers = item.ShowOthers,
+					ChartType = item.ChartType,
+					PageSize = item.PageSize,
+					IsLandingReport = item.IsLandingReport
+				};
+
+				mModelReportMenu.Reports.Add(report);
+			}
+		}
+		/// <summary>
+		/// Builds the viewmodel for choose customer Popup Filters and sets the drop down data
+		/// </summary>
+		/// <param name="userId"> user id</param>
+		/// <returns> List of Filter values</returns>
+		private List<FiltersViewModel> BuildChooseCustomerPopupFilterDataModel(int userId)
+	    {
+	        if (userId > 0)
+	        {
+	            var filterData = CustomerAccess.GetFilterDataByUserId(userId);
+	            return EntityConverter.Map<IEnumerable<Nalco.enVision.Data.Entities.CustomerContext.Filters>, IEnumerable<FiltersViewModel>>(filterData).ToList();
+	        }
+	        return null;
+        }
+
+        /// <summary>
+        /// Builds the viewmodel for choose customer Popup saved PlantSelectionFilters
+        /// </summary>
+        /// <param name="userId"> user id</param>
+        /// <returns> UserFilter values</returns>
+        private UserFiltersViewModel BuildChooseCustomerPopupPlantSelectionFilters(int userId)
+        {
+            if (userId > 0)
+            {
+                var filterData = CustomerAccess.GetUserPlantSelectionFilters(userId);
+                return EntityConverter.Map<Nalco.enVision.Data.Entities.CustomerContext.UserFilters, UserFiltersViewModel>(filterData);
+            }
+            return null;
+        }
+		#endregion
+
+	}
+
+}
+
+
+
