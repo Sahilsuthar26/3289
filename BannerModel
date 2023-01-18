@@ -1,0 +1,55 @@
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Web;
+using Nalco.enVision.Library.WebShared.Authentication;
+
+namespace Nalco.enVision.Web.Models.Home
+{
+	/// <summary>
+	/// Class for Banner 
+	/// </summary>
+	public class BannerModel
+	{
+		/// <summary>
+		/// Default Constructor 
+		/// </summary>
+		public BannerModel() { }
+
+		/// <summary>
+		/// Constructor with enVisionPrincipal
+		/// </summary>
+		/// <param name="enVisionUser"></param>
+		public BannerModel(IEnvisionPrincipal enVisionUser)
+		{
+			EnvisionUser = enVisionUser;
+
+		}
+		public IEnvisionPrincipal EnvisionUser { get; set; }
+		public string SiteNotificationTextEnabled { get; set; }
+		public string SiteNotificationText { get; set; }
+		//Run Sql Query Directly
+		public DataSet SqlExecute()
+		{
+			string query = "select top 1 * from dbo.InternalAppBannerSetting order by DateAndTime desc;";
+			DataSet ds = new DataSet();
+			using(SqlConnection connection = new SqlConnection(ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString))
+			{
+				connection.Open();
+
+				using(SqlDataAdapter adapter = new SqlDataAdapter(query, connection))
+				{
+					adapter.Fill(ds);
+
+				}
+				connection.Close();
+			}
+			return ds;
+		}
+
+
+	}
+}
