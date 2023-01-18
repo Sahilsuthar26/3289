@@ -1,0 +1,142 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using log4net;
+using Nalco.enVision.Data.Access.TextileCare.Reports.Scheduler;
+using Nalco.enVision.Data.Entities.TextileCare.Reports.Scheduler;
+using System.Linq;
+using Nalco.enVision.Library.TextileCare.Scheduler;
+using Nalco.TextileCare.Services.QueueProcessing;
+using Nalco.Data.Common;
+using Nalco.enVision.Data.Access.Properties;
+
+namespace Nalco.TextileCare.Services.Models
+{
+    public class ScheduledJobStateHandler : IJobStateHandler
+    {
+        private ReportQueueEntryModel QeueEntryModel;
+        private static readonly ILog mLog = LogManager.GetLogger(Program.QueueProcessingLog);
+        public ScheduledJobStateHandler(ReportQueueEntryModel queueEntryModel)
+        {
+            this.QeueEntryModel = queueEntryModel;
+        }
+
+        public void ProcessJob()
+        {
+
+            
+            DateTime newLastModifiedDateTime = DateTime.UtcNow;
+            DbAspect dbaspect = DbAspect.CreateAspect();
+            int rowsEffected;
+            ReportJobHistory jobHistory;
+            ReportQueueEntry queueJob = QeueEntryModel.Job;
+            
+
+
+            queueJob.JobStatus = ReportScheduleStatus.InProgress;//new state --- in progress. 
+            queueJob.ReportFileName = "Report" + queueJob.QueueID.ToString() + ".pdf";
+            queueJob.JobStepType = ReportJobStep.GenerateReportFile;
+
+            jobHistory = new ReportJobHistory()
+            {
+                HistoryID = queueJob.HistoryID,
+                ScheduleID=queueJob.ScheduleID,
+                ScheduleDateTime=queueJob.ScheduleDateTime,
+                ReportFileName = queueJob.ReportFileName,
+                JobStatus = queueJob.JobStatus,
+                JobStep = queueJob.JobStepType,
+                StartDateTime = newLastModifiedDateTime,
+                EndDateTime = null,
+                ErrorInfo = " ",
+				FormatTypeId = queueJob.FormatTypeId
+			};
+
+            using (DbAspect aspect = dbaspect.CreateTransaction())
+            {
+                ///1. Set job status to in-progress if it is not picked by another process
+                rowsEffected = SchedulerAccess.UpdateReportQueueStatus(aspect, queueJob, newLastModifiedDateTime);
+                mLog.InfoFormat("Rows Affected When updating the job record = {0}", rowsEffected);
+
+
+                if (rowsEffected == 1)// if not picked by another processs update history and generate the pdf
+                {
+                    queueJob.LastModifiedTime = newLastModifiedDateTime;
+
+                    //2.update the history record.
+                    SchedulerAccess.UpdateReportHistory(aspect, jobHistory);
+                    aspect.CommitTransaction();//Make in-progress state as committed as PDF generation is started.
+
+                    //3.Generate the PDF 
+                    TryGeneratePDFAndUpdateStatus(jobHistory);
+                }
+                else
+                {
+                    mLog.Info("Queue Record is updated by another process. Skipping the record");
+                }
+                
+            }
+              
+                    
+          
+
+                //rowsAffected
+        }
+
+        public void TryGeneratePDFAndUpdateStatus(ReportJobHistory jobHistory)
+        {
+            DbAspect dbaspect;
+            ReportQueueEntry queueJob = QeueEntryModel.Job;
+            DateTime newLastModifiedDateTime = DateTime.UtcNow;
+            int rowsEffected;
+            try
+            {
+
+                PDFGenerator pdfGenerator = ComponentFactory.GetPDFGenerator(queueJob.QueueID, queueJob.HistoryID, queueJob.ReportFileName);               
+				switch(jobHistory.FormatTypeId)
+				{
+					case (int)ReportFormatType.Excel:
+						pdfGenerator.GenerateExcel();  //PDF Generation completed success fully 
+						break;
+					case (int)ReportFormatType.PDF:
+						pdfGenerator.GeneratePDF();  //PDF Generation completed success fully
+						break;
+					case (int)ReportFormatType.PDFandExcel:
+						pdfGenerator.GeneratePDF();  //PDF Generation completed success fully 
+						pdfGenerator.GenerateExcel();  //PDF Generation completed success fully 
+						break;
+					default:
+						mLog.InfoFormat("Report Report Format Type Not Provided for QueueID={0} " + Convert.ToString(queueJob.QueueID) + "HistoryID={1} "
+					+ Convert.ToString(queueJob.HistoryID) + "ReportFile={2} " + Convert.ToString(queueJob.ReportFileName));
+						pdfGenerator.GeneratePDF();  //PDF Generation completed success fully 
+						pdfGenerator.GenerateExcel();  //PDF Generation completed success fully 
+						break;
+				}
+
+
+				//4.  update thejob  status to PDF Generated.
+				mLog.InfoFormat("Report Generation succeeded for QueueID={0}, HistoryID={1}, ReportFile={2}", queueJob.QueueID, queueJob.HistoryID, queueJob.ReportFileName);
+                dbaspect = DbAspect.CreateAspect();
+                using (DbAspect aspect = dbaspect.CreateTransaction())
+                {
+                    queueJob.JobStatus = ReportScheduleStatus.ReportGenerated;
+                    queueJob.JobStepType = ReportJobStep.GenerateReportFile;
+                    newLastModifiedDateTime = DateTime.UtcNow;
+                    rowsEffected = SchedulerAccess.UpdateReportQueueStatus(aspect, queueJob, newLastModifiedDateTime);
+                    jobHistory.JobStatus = ReportScheduleStatus.ReportGenerated;
+                    jobHistory.ErrorInfo = " ";
+                    jobHistory.EndDateTime = newLastModifiedDateTime;
+                    SchedulerAccess.UpdateReportHistory(aspect, jobHistory);
+                    aspect.CommitTransaction();
+                }
+
+
+
+            }
+            catch (Exception exp) //PDF Generation failed.
+            {
+                ServiceUtility.UpdatePDFFailure(queueJob, jobHistory, exp);
+            }
+
+        }
+    }
+}
