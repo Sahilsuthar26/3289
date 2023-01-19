@@ -1,0 +1,107 @@
+"FF Chemical Price ($ cent/kg)" 287
+"Real Usage (g/kg)" 1299
+"Compound Margin Variance (%)" 13133
+
+ChartDisplayId = 13133
+
+TCD ConduitLocal - banner
+
+windows
+airwatch - installation
+
+regedit
+4.7.2
+
+logmein login purpose remote
+
+
+Value 			LanuageID
+FF Chemical Price    1
+FF Chemikalienpreis    2
+FF Precio Productos    3
+Prezzo FF prodotti chimici    5
+FF化学品价格    6
+FF Chemical Price    7
+FF Chemie Prijs    8
+FF Kemijska Cijena    19
+
+
+DataException: Unable to find constructor for type PlantFacilityMapping. Available constructors do not match source. Source contains fields of type (Int32, String, String, Int32, Int32, Byte[], Int32, Boolean).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Web;
+using Nalco.enVision.Library.WebShared.Authentication;
+
+namespace Nalco.enVision.Web.Models.Home
+{
+	/// <summary>
+	/// Class for Banner
+	/// </summary>
+	public class BannerModel
+	{
+		/// <summary>
+		/// Default Constructor 
+		/// </summary>
+		public BannerModel() { }
+
+		/// <summary>
+		/// Constructor with enVisionPrincipal
+		/// </summary>
+		/// <param name="enVisionUser"></param>
+		public BannerModel(IEnvisionPrincipal enVisionUser)
+		{
+			EnvisionUser = enVisionUser;
+
+		}
+		public IEnvisionPrincipal EnvisionUser { get; set; }
+		public string SiteNotificationTextEnabled { get; set; }
+		public string SiteNotificationText { get; set; }
+
+		public DataSet SqlExecute()
+		{
+			string query = "select top 1 * from dbo.InternalAppBannerSetting order by DateAndTime desc;";
+			DataSet ds = new DataSet();
+			using(SqlConnection connection = new SqlConnection(ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString))
+			{
+				connection.Open();
+
+				using(SqlDataAdapter adapter = new SqlDataAdapter(query, connection))
+				{
+					adapter.Fill(ds);
+
+				}
+				connection.Close();
+			}
+			return ds;
+		}
+
+
+	}
+}
