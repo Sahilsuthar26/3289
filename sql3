@@ -1,0 +1,165 @@
+exec tcd.getreportcolumndetails 29, 1, 7,1, 'AUD'
+
+DECLARE @FFPreferencePlantlevelEnabled AS BIT = 0;
+DECLARE @FFPreferencePlantlevelPlantsCount AS INT = 0;
+Declare @EcolabAccountNumbers as Varchar = '0000126819,0000137250'
+
+SELECT @FFPreferencePlantlevelPlantsCount = COUNT(DISTINCT p.EcolabAccountNumber)
+FROM TCD.Plant p
+     INNER JOIN TCD.PlantChain pc ON p.PlantChainId = pc.PlantChainId
+     INNER JOIN TCD.ChainTextileCategory ctc ON pc.PlantChainId = ctc.PlantChainId
+WHERE p.EcolabAccountNumber IN
+(
+    SELECT items
+    FROM dbo.SplitString(@EcolabAccountNumbers, ',')
+)
+     AND ISNULL(CTC.Name, '') = ''
+     AND ISNULL(CTC.PreferredLevelId, 0) = (SELECT flm.PreferredLevelId FROM TCD.FFPreferredLevelMaster flm WHERE flm.PreferredLevel = 'Plant');
+IF(
+  (
+      SELECT COUNT(1)
+      FROM dbo.SplitString(@EcolabAccountNumbers, ',')
+  ) = @FFPreferencePlantlevelPlantsCount)
+    BEGIN
+        SET @FFPreferencePlantlevelEnabled = 1;
+END;
+    ELSE
+    BEGIN
+        SET @FFPreferencePlantlevelEnabled = 0;
+END;
+SELECT @FFPreferencePlantlevelEnabled;
+
+
+exec [TCD].[GetRibbonOptionDataForReport]
+
+
+
+
+
+
+
+
+DECLARE	@return_value int
+
+EXEC	@return_value = [TCD].[GetRibbonOptionDataForReport]
+		@Reportid = 29,
+		@Roleid = 1,
+		@Languageid = 7
+
+SELECT	'Return Value' = @return_value
+
+GO
+
+
+
+
+
+
+
+
+
+
+
+exec [TCD].[GetWasherMode] '0500019334', 2
+
+declare @RemoteDecpId int,@DispenserpName nvarchar(50),@FieldId int,@FieldValue nvarchar(25),
+@ControllerId int = 2;
+select @FieldId=id  from [TCD].[Field] where ClassName='RemoteDispenser'
+select @RemoteDecpId= value from TCD.ControllerSetupData  where Controllerid=@ControllerId and FieldId=@FieldId
+select @DispenserpName=name  from  [TCD].ConduitController where Controllerid=@RemoteDecpId
+
+select @FieldId=id   from [TCD].[Field] where ClassName='EnableRedundancy'
+select @FieldValue=value from TCD.ControllerSetupData  where Controllerid=@ControllerId and FieldId=@FieldId
+
+--select @DispenserpName As DispenserpName,@FieldValue as FieldValue 
+
+select @DispenserpName As Name
+union 
+select @FieldValue as Name 
+
+
+exec [TCD].[GetMaxWasherNumberForController] '0500019334', 2
+
+BEGIN
+	SET NOCOUNT ON;
+
+DECLARE @RemoteDispenserId INT = 0;
+DECLARE @FieldId INT;
+SELECT @FieldId=Id FROM [TCD].[Field] WHERE ClassName='RemoteDispenser'
+SELECT ISNULL(CAST(Value AS VARCHAR),'') FROM TCD.ControllerSetupData WHERE Controllerid=2 AND FieldId=@FieldId AND EcolabAccountNumber = '0500019334'
+
+SET NOCOUNT OFF;
+  END
+
+exec [TCD].[GetWasherModelSize] 2,'Girbau','Conventional'
+
+exec [TCD].[GetWasherList] '0500019334',1
+
+Declare @PlantProgramId int = 115;
+
+SELECT 
+		pcp.PlantProgramId, 
+		pcp.PlantProgramName
+	FROM TCD.PlantChainProgram AS pcp
+	WHERE pcp.PlantChainId = 21
+		  AND pcp.Is_Deleted = 0
+	ORDER BY pcp.PlantProgramName
+
+
+     IF EXISTS (SELECT 1 FROM TCD.PlantChainProgram pcp WHERE pcp.PlantProgramId = @PlantProgramId AND pcp.ChainTextileCategoryId IS NOT NULL)
+     BEGIN
+        SELECT 
+          pcp.PlantProgramId,
+          pcp.PlantProgramName, 
+          pcp.ChainTextileCategoryId, 
+          ctc.Name,
+          pcp.FormulaSegmentId, 
+          fs.SegmentName,
+          pcp.EcolabSaturationId,
+          es.EcolabSaturationName 
+        FROM 
+        TCD.PlantChainProgram pcp
+        INNER JOIN TCD.ChainTextileCategory ctc ON ctc.TextileId = pcp.ChainTextileCategoryId
+        INNER JOIN TCD.FormulaSegments fs ON fs.FormulaSegmentID = pcp.FormulaSegmentId
+        INNER JOIN TCD.EcolabSaturation es ON es.EcolabSaturationId = pcp.EcolabSaturationId
+        WHERE pcp.PlantProgramId = @PlantProgramId
+     END
+     ELSE
+     BEGIN
+        SELECT 
+          pcp.PlantProgramId,
+          pcp.PlantProgramName, 
+          pcp.EcolabTextileCategoryId, 
+          etc.CategoryName,
+          pcp.FormulaSegmentId, 
+          fs.SegmentName,
+          pcp.EcolabSaturationId,
+          es.EcolabSaturationName 
+        FROM 
+        TCD.PlantChainProgram pcp
+        INNER JOIN TCD.EcolabTextileCategory etc ON etc.TextileId = pcp.EcolabTextileCategoryId
+        INNER JOIN TCD.FormulaSegments fs ON fs.FormulaSegmentID = pcp.FormulaSegmentId
+        INNER JOIN TCD.EcolabSaturation es ON es.EcolabSaturationId = pcp.EcolabSaturationId
+        WHERE pcp.PlantProgramId = @PlantProgramId
+     END
+
+
+select * from tcd.Reportfavourites
+
+select * from tcd.ReportColumn where ReportColumnId in (287,1299,13133)
+
+exec [TCD].[GetReportColumnDetails] 29,1,7,2,'AUD'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
