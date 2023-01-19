@@ -1,0 +1,112 @@
+SELECT 
+          pcp.PlantProgramId,
+          pcp.PlantProgramName, 
+          pcp.EcolabTextileCategoryId, 
+          etc.CategoryName,
+          pcp.FormulaSegmentId, 
+          fs.SegmentName,
+          pcp.EcolabSaturationId,
+          es.EcolabSaturationName 
+        FROM 
+        TCD.PlantChainProgram pcp
+        INNER JOIN TCD.EcolabTextileCategory etc ON etc.TextileId = pcp.EcolabTextileCategoryId
+        INNER JOIN TCD.FormulaSegments fs ON fs.FormulaSegmentID = pcp.FormulaSegmentId
+        INNER JOIN TCD.EcolabSaturation es ON es.EcolabSaturationId = pcp.EcolabSaturationId
+        WHERE pcp.PlantProgramId = 115
+
+
+ select * from TCD.FormulaSegments fs where fs.FormulaSegmentID = 1
+
+ select * from TCD.EcolabTextileCategory etc where etc.TextileId =48
+
+select *  FROM TCD.ReportColumn AS RC 
+select * from TCD.ReportColumnMapping AS RAM where RAM.ReportColumnId = 287
+select * from TCD.ReportColumnRoleMapping AS RAR where RAR.ReportColumnId = 287
+select * from TCD.ResourceKeyMaster where KeyName = 'FIELD_FFCHEMICALPRICE'
+
+select * from TCD.ResourceKeyValue where value = 'Real Usage'
+
+
+select * from tcd.ReportColumnMapping where ReportId = 29
+
+--before change
+--287   : 4 FF
+--1299  : 9 Real Usage
+--13133 : 11 Compung
+
+--After change
+--287   : 9 FF
+--1299  : 11 Real Usage
+--13133 : 4 Compung
+
+--order change
+update tcd.ReportColumnMapping set DisplayOrder = 9 where ReportColumnId = 287
+update tcd.ReportColumnMapping set DisplayOrder = 11 where ReportColumnId = 1299
+update tcd.ReportColumnMapping set DisplayOrder = 4 where ReportColumnId = 13133
+
+--update for graph as deviation
+select * from tcd.reportcolumn where reportcolumnid=13133
+update tcd.reportcolumn set columnName='Compound Margin Deviation' reportcolumnid=13133
+
+--all name changes
+select * from TCD.ResourceKeyValue AS RKV where RKV.KeyName  = 'FIELD_FFCHEMICALPRICE'
+select * from TCD.ResourceKeyValue AS RKV where RKV.KeyName  = 'FIELD_REALUSAGE'
+select * from TCD.ResourceKeyValue AS RKV where RKV.KeyName  = 'FIELD_COMPOUNDMARGIN'
+
+--heading name changes
+select * from TCD.ResourceKeyValue where keyname='FIELD_FFEVALUATION'
+
+
+select * from TCD.ResourceKeyValue where value like 'Compound%'
+
+
+update TCD.ResourceKeyValue set value='FF Evaluation'  where Value='TCD FF' and LanguageID = 7
+select * from tcd.report where reportname='FF Evaluation'
+
+
+update tcd.report set reportname='FF Evaluation' where reportname='TCD FF Evaluation'
+exec [TCD].[GetReports] 1,7,3 --FF Evaluation
+
+
+
+
+select * from TCD.ReportRoleMapping where reportid=29
+select * from TCD.DefaultReportMapping where reportid=29
+select * from TCD.ReportSubCategory where reportsubcategoryid=9
+select * from TCD.ReportCategory AS RC where RC.ReportCategoryId =5
+
+select * from TCD.ResourceKeyValue AS RKV where RKV.KeyName= 'FIELD_ECOLABINTERNAL'
+
+select * from TCD.ReportCategory AS RC
+
+SELECT
+		RKV.[Value]
+	FROM TCD.ResourceKeyMaster AS RKM
+		JOIN TCD.ResourceKeyValue AS RKV ON RKV.KeyName = RKM.KeyName
+	WHERE RKM.KeyName = 'FIELD_ECOLABINTERNAL'
+
+
+
+
+	SELECT *
+	FROM TCD.Plant PT
+    INNER JOIN FacilityMaster FM ON FM.SoldTo = PT.EcolabAccountNumber
+    INNER JOIN TCD.PlantCustAddress PCA ON PCA.EcolabAccountNumber = PT.EcolabAccountNumber
+    INNER JOIN dbo.Company_CustomerMaster CCM ON FM.CustomerId = CCM.CustomerId
+    INNER JOIN dbo.Company C ON CCM.CompanyId = C.CompanyId
+    LEFT JOIN dbo.Company CC ON C.ParentCompanyId = CC.CompanyId
+	WHERE FacilityID IN ('1974768','1974804') 
+	
+	select * from FacilityMaster FM where FM.SoldTo ='0000126819'
+
+	select * from tcd.plant where EcolabAccountNumber='0000126819'
+	select * from tcd.plant where EcolabAccountNumber='0000090001'
+	select * from tcd.plant where budgetcustomer!=1
+
+	0000126819
+	0000137250
+
+	select * from tcd.plant where EcolabAccountNumber='0000090001'
+	0000090001
+	0048736005
+
