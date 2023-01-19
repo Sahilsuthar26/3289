@@ -1,0 +1,46 @@
+SELECT
+				rc.ReportCategoryId,	
+				COALESCE((SELECT
+									RKV.[Value]
+								FROM TCD.ResourceKeyMaster AS RKM
+									JOIN TCD.ResourceKeyValue AS RKV ON RKV.KeyName = RKM.KeyName
+								WHERE RKM.KeyName = RC.UsageKey
+									AND RKV.LanguageID = 7), (SELECT TOP (1)
+																			RCAT.CategoryName
+																		FROM TCD.ReportCategory AS RCAT
+																		WHERE RCAT.ReportCategoryId = RC.ReportCategoryId ORDER BY RCAT.CategoryName))AS Category,	
+				RSC.ReportSubCategoryId,	
+				COALESCE((SELECT
+									RKV.[Value]
+								FROM TCD.ResourceKeyMaster AS RKM
+									JOIN TCD.ResourceKeyValue AS RKV ON RKV.KeyName = RKM.KeyName
+								WHERE RKM.KeyName = RSC.UsageKey
+									AND RKV.LanguageID = 7), RSC.SubCategoryName)AS SubCategory,	
+				0 AS ReportId,	
+				'' AS ReportName,	
+				0 AS DisplayTopRecordsCount,	
+				CAST(0 AS BIT)AS ShowOthers,	
+				CAST(0 AS BIT)AS ShowTotal,	
+				'' AS ChartType,	
+				CAST(0 AS BIT)AS IsPaging,	
+				0 AS PageSize,	
+				0 AS CategoryDefaultReportId,	
+				0 AS SubCategoryReport,	
+				CAST(0 AS BIT)AS IsLandingReport,	
+				100 AS DisplayOrder,
+				RC.DisplayOrder as CategoryDisplayOrder
+			FROM TCD.ReportCategory AS RC
+					INNER JOIN TCD.ReportSubCategory AS RSC ON RC.ReportCategoryId = RSC.ReportCategoryId
+														AND RC.UsageKey = 'FIELD_FAVORITE'
+			ORDER BY
+				rc.ReportCategoryId ASC
+
+
+				SELECT
+									RKV.[Value]
+								FROM TCD.ResourceKeyMaster AS RKM
+									JOIN TCD.ResourceKeyValue AS RKV ON RKV.KeyName = RKM.KeyName
+								WHERE RKM.KeyName = 'FIELD_FFEVALUATION'
+									AND RKV.LanguageID = 7
+
+
